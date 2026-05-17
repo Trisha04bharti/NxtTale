@@ -1,21 +1,38 @@
-//
-//  BookDetailView.swift
-//  NxtTale
-//
-//  Created by Vikram Kumar on 16/05/26.
-//
-
 import SwiftUI
 
+// ── Meta Info Widget ──
+struct MetaItem: View {
+    let icon: String
+    let color: Color
+    let label: String
+    let value: String
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .foregroundColor(color)
+                .font(.title3)
+            Text(value)
+                .font(.subheadline.bold())
+            Text(label)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+}
+
+// ── Book Detail View ──
 struct BookDetailView: View {
     let book: Book
+    @EnvironmentObject var authVM: AuthViewModel
     @Environment(\.dismiss) var dismiss
+    @State private var appearedAt: Date = Date()
 
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
 
-                // ── Hero Cover Image ──
+                // ── Hero Cover ──
                 AsyncImage(url: URL(string: book.coverImage ?? "")) { phase in
                     switch phase {
                     case .success(let image):
@@ -56,25 +73,31 @@ struct BookDetailView: View {
 
                     Divider()
 
-                    // Meta info row
+                    // Meta Row
                     HStack(spacing: 24) {
                         if let rating = book.averageRating, rating > 0 {
-                            MetaItem(icon: "star.fill",
-                                     color: .yellow,
-                                     label: "Rating",
-                                     value: String(format: "%.1f", rating))
+                            MetaItem(
+                                icon: "star.fill",
+                                color: .yellow,
+                                label: "Rating",
+                                value: String(format: "%.1f", rating)
+                            )
                         }
                         if let pages = book.pageCount, pages > 0 {
-                            MetaItem(icon: "doc.text",
-                                     color: .blue,
-                                     label: "Pages",
-                                     value: "\(pages)")
+                            MetaItem(
+                                icon: "doc.text",
+                                color: .blue,
+                                label: "Pages",
+                                value: "\(pages)"
+                            )
                         }
                         if let date = book.publishedDate, !date.isEmpty {
-                            MetaItem(icon: "calendar",
-                                     color: .green,
-                                     label: "Published",
-                                     value: String(date.prefix(4)))
+                            MetaItem(
+                                icon: "calendar",
+                                color: .green,
+                                label: "Year",
+                                value: String(date.prefix(4))
+                            )
                         }
                     }
 
@@ -113,38 +136,22 @@ struct BookDetailView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .navigationBarBackButtonHidden(false)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    // Save/bookmark action — can add later
-                } label: {
-                    Image(systemName: "bookmark")
-                        .foregroundColor(.white)
-                        .shadow(radius: 2)
-                }
-            }
+        .onAppear {
+            appearedAt = Date()
         }
-    }
-}
-
-// ── Small meta info widget ──
-struct MetaItem: View {
-    let icon: String
-    let color: Color
-    let label: String
-    let value: String
-
-    var body: some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon)
-                .foregroundColor(color)
-                .font(.title3)
-            Text(value)
-                .font(.subheadline.bold())
-            Text(label)
-                .font(.caption)
-                .foregroundColor(.secondary)
+        .onDisappear {
+            let seconds = Int(Date().timeIntervalSince(appearedAt))
+            guard seconds > 2 else { return }
+            Task {
+                await RecommendService.shared.trackActivity(
+                    token: authVM.token,
+                    bookId: book.id,
+                    googleBookId: book.googleBookId,
+                    timeSpent: seconds,
+                    categories: book.categories ?? [],
+                    authors: book.authors
+                )
+            }
         }
     }
 }

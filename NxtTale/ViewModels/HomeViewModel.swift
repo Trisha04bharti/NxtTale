@@ -4,15 +4,15 @@
 //
 //  Created by Vikram Kumar on 17/05/26.
 //
-
 import SwiftUI
-import Combine
 
 @MainActor
 class HomeViewModel: ObservableObject {
-    @Published var recommendations: [Book] = []
+    @Published var recommendations: [Book]      = []
     @Published var categories: [CategorySection] = []
-    @Published var feedBooks: [Book] = []
+    @Published var feedBooks: [Book]            = []
+    @Published var recentlyRead: [Book]         = []
+    @Published var similarSections: [SimilarSection] = []
     @Published var recommendReason: String?
     @Published var isLoading = false
 
@@ -35,10 +35,12 @@ class HomeViewModel: ObservableObject {
 
     private func loadRecommendations(token: String) async {
         do {
-            let res = try await RecommendService.shared.getRecommendations(token: token)
-            recommendations = res.recommendations
-            categories      = res.categories
-            recommendReason = res.reason
+            let res      = try await RecommendService.shared.getRecommendations(token: token)
+            recommendations  = res.recommendations
+            categories       = res.categories
+            recentlyRead     = res.recentlyRead
+            similarSections  = res.similarSections
+            recommendReason  = res.reason
         } catch {
             print("RECOMMEND ERROR: \(error)")
         }

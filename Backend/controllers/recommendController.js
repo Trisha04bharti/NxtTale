@@ -1,4 +1,3 @@
-
 const Book         = require('../models/Book');
 const UserActivity = require('../models/UserActivity');
 const axios        = require('axios');
@@ -8,135 +7,163 @@ const GEMINI_KEY = process.env.GEMINI_API_KEY;
 // GET /api/recommend
 exports.getRecommendations = async (req, res) => {
   try {
-    // 1. Get user activity
     const activities = await UserActivity.find({ userId: req.user.id })
       .populate('bookId')
-      .sort({ timeSpent: -1 })
-      .limit(15);
+      .sort({ updatedAt: -1 })
+      .limit(20);
 
-    // 2. Build user profile for Gemini
+    const allBooks = await Book.find().limit(100);
+
+    if (allBooks.length === 0)
+      return res.json({ recommendations: [], categories: [], recentlyRead: [], similarSections: [] });
+
+    // Recently read books (last 10 viewed)
+    const recentlyRead = activities
+      .filter(a => a.bookId)
+      .slice(0, 10)
+      .map(a => a.bookId);
+
+    // Build similar sections for last 3 read books
+    const similarSections = [];
+    const lastThree = activities.filter(a => a.bookId).slice(0, 3);
+
+    for (const activity of lastThree) {
+      const sourceBook = activity.bookId;
+      const cats = sourceBook.categories || [];
+      const authors = sourceBook.authors || [];
+
+      // Find similar books by category or author
+      const similar = allBooks.filter(b => {
+        if (b._id.toString() === sourceBook._id.toString()) return false;
+        const alreadyRead = recentlyRead.some(r => r._id.toString() === b._id.toString());
+        if (alreadyRead) return false;
+
+        const sharedCat = b.categories?.some(c => cats.includes(c));
+        const sharedAuthor = b.authors?.some(a => authors.includes(a));
+        return sharedCat || sharedAuthor;
+      }).slice(0, 10);
+
+      if (similar.length >= 2) {
+        const genre = cats[0] || 'Similar';
+        similarSections.push({
+          sourceBook: {
+            id:    sourceBook._id,
+            title: sourceBook.title,
+            coverImage: sourceBook.coverImage
+          },
+          genre,
+          books: similar
+        });
+      }
+    }
+
+    // Personalized recommendations via Gemini
+    let recommendations = [];
+    let reason = '';
+
     const viewedBooks = activities.map(a => ({
       title:      a.bookId?.title,
       authors:    a.bookId?.authors,
       categories: a.bookId?.categories,
       timeSpent:  a.timeSpent,
-      searchQuery:a.searchQuery
     })).filter(b => b.title);
 
-    // 3. Get all books from DB
-    const allBooks = await Book.find().limit(100);
+    if (viewedBooks.length > 0) {
+      try {
+        const readIds = recentlyRead.map(b => b._id.toString());
+        const bookList = allBooks
+          .filter(b => !readIds.includes(b._id.toString()))
+          .map(b => ({ id: b._id, title: b.title, authors: b.authors, categories: b.categories }));
 
-    if (allBooks.length === 0)
-      return res.json({ recommendations: [], categories: [] });
-
-    // 4. If no activity yet, return default categories
-    if (viewedBooks.length === 0) {
-      const categories = buildDefaultCategories(allBooks);
-      return res.json({ recommendations: [], categories });
-    }
-
-    // 5. Ask Gemini for personalized recommendations
-    const bookList = allBooks.map(b => ({
-      id:         b._id,
-      title:      b.title,
-      authors:    b.authors,
-      categories: b.categories
-    }));
-
-    const prompt = `
+        const prompt = `
 You are a book recommendation engine.
-
-User's reading activity (books they viewed, time spent in seconds):
+User's reading activity (time in seconds = engagement level):
 ${JSON.stringify(viewedBooks, null, 2)}
 
-Available books in our database:
+Available books:
 ${JSON.stringify(bookList, null, 2)}
 
-Based on the user's interests shown by their activity, recommend books from the available list.
-Return ONLY a valid JSON object (no markdown, no explanation) in this exact format:
+Return ONLY valid JSON, no markdown:
 {
-  "personalizedIds": ["bookId1", "bookId2", "bookId3", "bookId4", "bookId5"],
-  "reason": "Brief reason for recommendations"
+  "personalizedIds": ["id1","id2","id3","id4","id5"],
+  "reason": "one sentence why"
 }
-Only include _id values from the available books list.
-    `.trim();
+        `.trim();
 
-    const geminiRes = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
-      {
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 500 }
+        const geminiRes = await axios.post(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
+          {
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.7, maxOutputTokens: 500 }
+          }
+        );
+
+        const raw   = geminiRes.data.candidates[0].content.parts[0].text;
+        const clean = raw.replace(/```json|```/g, '').trim();
+        const parsed = JSON.parse(clean);
+
+        recommendations = allBooks.filter(b =>
+          parsed.personalizedIds.includes(b._id.toString())
+        );
+        reason = parsed.reason;
+      } catch (e) {
+        console.error('Gemini error:', e.message);
       }
-    );
+    }
 
-    const raw = geminiRes.data.candidates[0].content.parts[0].text;
-    const clean = raw.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
+    // Category sections
+    const usedIds = [
+      ...recentlyRead.map(b => b._id.toString()),
+      ...recommendations.map(b => b._id.toString()),
+      ...similarSections.flatMap(s => s.books.map(b => b._id.toString()))
+    ];
+    const remaining = allBooks.filter(b => !usedIds.includes(b._id.toString()));
+    const categories = buildDefaultCategories(remaining);
 
-    const recommended = allBooks.filter(b =>
-      parsed.personalizedIds.includes(b._id.toString())
-    );
-
-    // 6. Build category sections from remaining books
-    const categories = buildDefaultCategories(
-      allBooks.filter(b => !parsed.personalizedIds.includes(b._id.toString()))
-    );
-
-    res.json({ recommendations: recommended, categories, reason: parsed.reason });
+    res.json({ recommendations, reason, recentlyRead, similarSections, categories });
 
   } catch (err) {
     console.error('Recommend error:', err.message);
-    // Fallback to category-only
     const allBooks = await Book.find().limit(100);
-    res.json({ recommendations: [], categories: buildDefaultCategories(allBooks) });
+    res.json({
+      recommendations: [],
+      categories: buildDefaultCategories(allBooks),
+      recentlyRead: [],
+      similarSections: []
+    });
   }
 };
 
 function buildDefaultCategories(books) {
-  const categoryMap = {};
-
-  books.forEach(book => {
-    const cats = book.categories?.length ? book.categories : ['General'];
-    cats.forEach(cat => {
-      // Normalize category names
-      const key = normalizeCat(cat);
-      if (!categoryMap[key]) categoryMap[key] = [];
-      if (categoryMap[key].length < 10) categoryMap[key].push(book);
-    });
-  });
-
-  // Add fixed genre buckets
   const genreKeywords = {
-    'Romance':  ['romance', 'love', 'relationship'],
-    'Comedy':   ['humor', 'comedy', 'funny', 'satire'],
-    'Thriller': ['thriller', 'mystery', 'suspense', 'crime'],
-    'Fantasy':  ['fantasy', 'magic', 'dragons', 'wizard'],
-    'Science':  ['science', 'physics', 'biology', 'space'],
-    'History':  ['history', 'historical', 'biography'],
-    'Fiction':  ['fiction', 'novel', 'literary'],
+    'Romance':   ['romance', 'love', 'relationship'],
+    'Comedy':    ['humor', 'comedy', 'funny', 'satire'],
+    'Thriller':  ['thriller', 'mystery', 'suspense', 'crime'],
+    'Fantasy':   ['fantasy', 'magic', 'dragons', 'wizard'],
+    'Science':   ['science', 'physics', 'biology', 'space'],
+    'History':   ['history', 'historical', 'biography'],
+    'Fiction':   ['fiction', 'novel', 'literary'],
   };
 
-  const genreSections = {};
+  const sections = {};
   Object.entries(genreKeywords).forEach(([genre, keywords]) => {
     const matched = books.filter(b => {
-      const cats = (b.categories || []).join(' ').toLowerCase();
+      const cats  = (b.categories || []).join(' ').toLowerCase();
       const title = b.title.toLowerCase();
       return keywords.some(k => cats.includes(k) || title.includes(k));
     });
-    if (matched.length >= 2) genreSections[genre] = matched.slice(0, 10);
+    if (matched.length >= 2) sections[genre] = matched.slice(0, 10);
   });
 
-  // Merge
-  const final = { ...genreSections };
-  Object.entries(categoryMap).forEach(([cat, bks]) => {
-    if (!final[cat] && bks.length >= 2) final[cat] = bks;
+  // Fallback — group by first category
+  books.forEach(book => {
+    const cat = book.categories?.[0];
+    if (!cat) return;
+    const key = cat.split('/')[0].trim();
+    if (!sections[key] && books.filter(b => b.categories?.includes(cat)).length >= 2) {
+      sections[key] = books.filter(b => b.categories?.includes(cat)).slice(0, 10);
+    }
   });
 
-  return Object.entries(final).map(([name, books]) => ({ name, books }));
-}
-
-function normalizeCat(cat) {
-  return cat.split('/')[0].trim()
-    .replace(/&/g, 'and')
-    .replace(/\b\w/g, l => l.toUpperCase());
+  return Object.entries(sections).map(([name, books]) => ({ name, books }));
 }
