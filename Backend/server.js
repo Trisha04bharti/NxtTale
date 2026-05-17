@@ -13,6 +13,8 @@ app.use(express.json({ limit: '10mb' }));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/user', require('./routes/user'));
 app.use('/api/books', require('./routes/books'));
+app.use('/api/activity',  require('./routes/activity'));
+app.use('/api/recommend', require('./routes/recommend'));
 
 
 app.get('/', (req, res) => res.send('NxtTale API Running'));
