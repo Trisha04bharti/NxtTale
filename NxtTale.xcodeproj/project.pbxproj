@@ -10,9 +10,22 @@
 		C624907D2FB84FA7004A245F /* NxtTale.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NxtTale.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		C62490D22FB89BC8004A245F /* Exceptions for "NxtTale" folder in "NxtTale" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = C624907C2FB84FA7004A245F /* NxtTale */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		C624907F2FB84FA7004A245F /* NxtTale */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C62490D22FB89BC8004A245F /* Exceptions for "NxtTale" folder in "NxtTale" target */,
+			);
 			path = NxtTale;
 			sourceTree = "<group>";
 		};
