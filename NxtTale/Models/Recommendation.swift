@@ -23,7 +23,6 @@ struct SourceBook: Codable {
         case title, coverImage
     }
 }
-
 struct SimilarSection: Codable, Identifiable {
     var id: String { sourceBook.id }
     let sourceBook: SourceBook

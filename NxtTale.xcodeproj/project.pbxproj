@@ -6,8 +6,16 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		C6680D112FB9E1BD00A660BD /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = C6680D102FB9E1BD00A660BD /* Lottie */; };
+		C6680D152FB9E55900A660BD /* reading.json in Resources */ = {isa = PBXBuildFile; fileRef = C6680D142FB9E55900A660BD /* reading.json */; };
+		C6680D172FB9EBA800A660BD /* search.json in Resources */ = {isa = PBXBuildFile; fileRef = C6680D162FB9EBA800A660BD /* search.json */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		C624907D2FB84FA7004A245F /* NxtTale.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NxtTale.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C6680D142FB9E55900A660BD /* reading.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = reading.json; sourceTree = "<group>"; };
+		C6680D162FB9EBA800A660BD /* search.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = search.json; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -36,6 +44,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C6680D112FB9E1BD00A660BD /* Lottie in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -45,6 +54,8 @@
 		C62490742FB84FA7004A245F = {
 			isa = PBXGroup;
 			children = (
+				C6680D162FB9EBA800A660BD /* search.json */,
+				C6680D142FB9E55900A660BD /* reading.json */,
 				C624907F2FB84FA7004A245F /* NxtTale */,
 				C624907E2FB84FA7004A245F /* Products */,
 			);
@@ -78,6 +89,7 @@
 			);
 			name = NxtTale;
 			packageProductDependencies = (
+				C6680D102FB9E1BD00A660BD /* Lottie */,
 			);
 			productName = NxtTale;
 			productReference = C624907D2FB84FA7004A245F /* NxtTale.app */;
@@ -107,6 +119,9 @@
 			);
 			mainGroup = C62490742FB84FA7004A245F;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				C6680D0F2FB9E1BD00A660BD /* XCRemoteSwiftPackageReference "lottie-ios" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C624907E2FB84FA7004A245F /* Products */;
 			projectDirPath = "";
@@ -122,6 +137,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C6680D172FB9EBA800A660BD /* search.json in Resources */,
+				C6680D152FB9E55900A660BD /* reading.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -345,6 +362,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		C6680D0F2FB9E1BD00A660BD /* XCRemoteSwiftPackageReference "lottie-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/airbnb/lottie-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.6.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		C6680D102FB9E1BD00A660BD /* Lottie */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C6680D0F2FB9E1BD00A660BD /* XCRemoteSwiftPackageReference "lottie-ios" */;
+			productName = Lottie;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = C62490752FB84FA7004A245F /* Project object */;
 }
