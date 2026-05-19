@@ -98,7 +98,7 @@ struct OnboardingView: View {
                     VStack{
                                         
               OkalyLogo()
-         Text("Save and Invest with Oakly")
+         Text("Every Story Begins Somewhere")
                   }
           .padding(.top , 40)
                                       

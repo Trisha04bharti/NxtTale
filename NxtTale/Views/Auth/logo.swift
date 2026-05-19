@@ -13,7 +13,7 @@ struct OkalyLogo : View {
     var color : Color = .white
     
     var body: some View {
-        Image("logo")
+        Image("butterflyy")
             .resizable()
             .scaledToFit()
             .frame(width: 80 , height: size)
