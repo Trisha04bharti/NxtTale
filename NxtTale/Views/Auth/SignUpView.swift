@@ -54,8 +54,26 @@ struct SignUpView: View {
                         }
                     }
 
-                    Button("Already have an account? Login") { showLogin = true }
-                        .font(.footnote).foregroundColor(.blue)
+//                    Button("Already have an account? Login") { showLogin = true }
+                    Button(
+                        action: {
+                            showLogin = true
+                        }
+                    ) {
+
+                        HStack(spacing: 4) {
+
+                            Text("Already have an account?")
+                                .font(.footnote)
+                                .foregroundColor(.black)
+
+                            Text("Login")
+                                .font(.footnote)
+                                .foregroundStyle(.green)
+                        }
+                    }
+                    
+                    
                 }
                 .padding(.horizontal, 24)
             }

@@ -1,86 +1,76 @@
-//
-//  onBoardingView.swift
-//  NxtTale
-//
-//  Created by Vikram Kumar on 18/05/26.
-//
+
 
 //import SwiftUI
 //
-//struct OnboardingView : View {
-//    
+//struct OnboardingView: View {
+//
 //    @EnvironmentObject var vm: AuthViewModel
-//    
+//    @State private var navigateToSignup = false
+//
 //    var body: some View {
-//        NavigationStack{
-//            ZStack{
+//
+//        NavigationStack {
+//
+//            ZStack {
+//
 //                Image("bb")
 //                    .resizable()
 //                    .scaledToFill()
 //                    .ignoresSafeArea()
-//                
-//                VStack{
+//
+//                VStack {
+//                    
 //                    VStack{
-//                      
-////                        OkalyLogo()
-//                        Image("logo")
-//                                  .resizable()
-//                                  .scaledToFit()
-//                                  .frame(width: 80 , height: 80)
-//                                  .foregroundStyle(.white)
-//                        
-//                        Text("Save and Invest with Oakly")
-//                        
-//                    }
-//                    .padding(.top , 40)
-//                    
+//                                        
+//              OkalyLogo()
+//         Text("Every Story Begins Somewhere")
+//                  }
+//          .padding(.top , 40)
+//                                      
+//                                    
+//
 //                    Spacer()
-//                    
-//                    NavigationLink(
-//                        destination: SignUpView(),
-//                        tag: 1,
-//                        selection: $vm.viewState.navigate
-//                    ) {
+//
+//                    Button {
+//                        navigateToSignup = true
+//                    } label: {
+//
 //                        Text("Get Started")
-//                            .foregroundStyle(Color.white)
-//                            .frame(width: 290 , height: 40)
+//                            .foregroundStyle(.white)
+//                            .frame(width: 290, height: 40)
 //                            .background(Color.green)
 //                            .cornerRadius(20)
 //                    }
 //                    
 //                    HStack{
-//                        Text("Already have an account ?")
-//                            .foregroundStyle(Color.white)
-//                        
+//                   Text("Already have an account ?")
+//                           .foregroundStyle(Color.white)
+//                                         
 //                        Button("Log in"){
-//                            
-//                        }
+//                                             
+//                                         }
+//                                         .foregroundStyle(Color.green)
+//                                     }
 //
-//                        .foregroundStyle(Color.green)
-//                    }
-//                    
-//                    
-//                    
-//                    .padding()
-//                    
 //                }
-//                
-//                
-//                
-//                
-//                
-//                
+//            }
+//            .navigationDestination(isPresented: $navigateToSignup) {
+//                SignUpView()
 //            }
 //        }
 //    }
 //}
+//
+
 
 import SwiftUI
 
 struct OnboardingView: View {
 
     @EnvironmentObject var vm: AuthViewModel
+
     @State private var navigateToSignup = false
+    @State private var navigateToLogin = false
 
     var body: some View {
 
@@ -94,20 +84,24 @@ struct OnboardingView: View {
                     .ignoresSafeArea()
 
                 VStack {
-                    
-                    VStack{
-                                        
-              OkalyLogo()
-         Text("Every Story Begins Somewhere")
-                  }
-          .padding(.top , 40)
-                                      
-                                    
+
+                    VStack {
+
+                        OkalyLogo()
+
+                        Text("Every Story Begins Somewhere")
+                           
+
+                    }
+                    .padding(.top, 40)
 
                     Spacer()
 
+                    // Get Started Button
                     Button {
+
                         navigateToSignup = true
+
                     } label: {
 
                         Text("Get Started")
@@ -117,15 +111,41 @@ struct OnboardingView: View {
                             .cornerRadius(20)
                     }
 
+                    // Login Section
+                    HStack {
+
+                        Text("Already have an account ?")
+                            .foregroundStyle(.white)
+
+                        Button("Log in") {
+
+                            navigateToLogin = true
+                        }
+                        .foregroundStyle(.green)
+                    }
+                    .padding(.top, 8)
                 }
             }
+
+            // Navigate to SignUp
             .navigationDestination(isPresented: $navigateToSignup) {
+
                 SignUpView()
+            }
+
+            // Navigate to Login
+            .navigationDestination(isPresented: $navigateToLogin) {
+
+                LoginView()
             }
         }
     }
 }
 
-#Preview {
-    OnboardingView()
-}
+//#Preview {
+//    OnboardingView()
+//}
+
+//#Preview {
+//    OnboardingView()
+//}
