@@ -1,12 +1,12 @@
-// const Book         = require('../models/Book');
-// const UserActivity = require('../models/UserActivity');
-// const axios        = require('axios');
-// const RecommendCache = require('../models/RecommendCache');
 
+
+// const Book           = require('../models/Book');
+// const UserActivity   = require('../models/UserActivity');
+// const RecommendCache = require('../models/RecommendCache');
+// const axios          = require('axios');
 
 // const GEMINI_KEY = process.env.GEMINI_API_KEY;
 
-// // GET /api/recommend
 // exports.getRecommendations = async (req, res) => {
 //   try {
 //     const activities = await UserActivity.find({ userId: req.user.id })
@@ -19,8 +19,8 @@
 //     if (allBooks.length === 0)
 //       return res.json({
 //         recommendations: [],
-//         categories: [],
-//         recentlyRead: [],
+//         categories:      [],
+//         recentlyRead:    [],
 //         similarSections: []
 //       });
 
@@ -30,7 +30,7 @@
 //       .slice(0, 10)
 //       .map(a => a.bookId);
 
-//     // ── Similar Sections (Because you read X) ──
+//     // ── Similar Sections ──
 //     const similarSections = [];
 //     const lastThree = activities.filter(a => a.bookId).slice(0, 3);
 
@@ -45,112 +45,58 @@
 //           r => r._id.toString() === b._id.toString()
 //         );
 //         if (alreadyRead) return false;
-
 //         const sharedCat    = b.categories?.some(c => cats.includes(c));
 //         const sharedAuthor = b.authors?.some(a => authors.includes(a));
 //         return sharedCat || sharedAuthor;
 //       }).slice(0, 10);
 
 //       if (similar.length >= 2) {
-//         const genre = cats[0] || 'Similar';
 //         similarSections.push({
 //           sourceBook: {
 //             _id:        sourceBook._id,
 //             title:      sourceBook.title,
 //             coverImage: sourceBook.coverImage
 //           },
-//           genre,
+//           genre: cats[0] || 'Similar',
 //           books: similar
 //         });
 //       }
 //     }
 
-// //     // ── Gemini Personalized Recommendations ──
-// //     let recommendations = [];
-// //     let reason          = '';
+//     // ── Gemini Recommendations (with cache) ──
+//     let recommendations = [];
+//     let reason          = '';
 
-// //     const viewedBooks = activities.map(a => ({
-// //       title:      a.bookId?.title,
-// //       authors:    a.bookId?.authors,
-// //       categories: a.bookId?.categories,
-// //       timeSpent:  a.timeSpent,
-// //     })).filter(b => b.title);
+//     const viewedBooks = activities.map(a => ({
+//       title:      a.bookId?.title,
+//       authors:    a.bookId?.authors,
+//       categories: a.bookId?.categories,
+//       timeSpent:  a.timeSpent,
+//     })).filter(b => b.title);
 
-// //     if (viewedBooks.length > 0) {
-// //       try {
-// //         const readIds  = recentlyRead.map(b => b._id.toString());
-// //         const bookList = allBooks
-// //           .filter(b => !readIds.includes(b._id.toString()))
-// //           .map(b => ({
-// //             id:         b._id,
-// //             title:      b.title,
-// //             authors:    b.authors,
-// //             categories: b.categories
-// //           }));
+//     if (viewedBooks.length > 0) {
 
-// //         const prompt = `
-// // You are a book recommendation engine.
-// // User's reading activity (timeSpent in seconds = engagement level):
-// // ${JSON.stringify(viewedBooks, null, 2)}
+//       // Check cache first — only call Gemini every 30 minutes
+//       const cache = await RecommendCache.findOne({ userId: req.user.id });
+//       if (cache && (Date.now() - cache.updatedAt) < 30 * 60 * 1000) {
+//         console.log('Using cached recommendations');
+//         recommendations = cache.recommendations;
+//         reason          = cache.reason;
+//       } else {
+//         // Call Gemini
+//         try {
+//           const readIds  = recentlyRead.map(b => b._id.toString());
+//           const bookList = allBooks
+//             .filter(b => !readIds.includes(b._id.toString()))
+//             .slice(0, 20)
+//             .map(b => ({
+//               id:         b._id,
+//               title:      b.title,
+//               authors:    b.authors,
+//               categories: b.categories
+//             }));
 
-// // Available books in database:
-// // ${JSON.stringify(bookList, null, 2)}
-
-// // Based on user's interests, pick 5 books from the available list.
-// // Return ONLY valid JSON, no markdown, no explanation:
-// // {
-// //   "personalizedIds": ["id1","id2","id3","id4","id5"],
-// //   "reason": "one sentence explaining why these were picked"
-// // }
-// //         `.trim();
-
-// //         const geminiRes = await axios.post(
-// //           `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
-// //           {
-// //             contents: [{ parts: [{ text: prompt }] }],
-// //             generationConfig: { temperature: 0.7, maxOutputTokens: 500 }
-// //           }
-// //         );
-
-// //         const raw    = geminiRes.data.candidates[0].content.parts[0].text;
-// //         const clean  = raw.replace(/```json|```/g, '').trim();
-// //         const parsed = JSON.parse(clean);
-
-// //         recommendations = allBooks.filter(b =>
-// //           parsed.personalizedIds.includes(b._id.toString())
-// //         );
-// //         reason = parsed.reason;
-
-// //       } catch (e) {
-// //         console.error('Gemini error:', e.message);
-// //       }
-// //     }
-
-// // ── Gemini Personalized Recommendations ──
-// let recommendations = [];
-// let reason          = '';
-
-// const viewedBooks = activities.map(a => ({
-//   title:      a.bookId?.title,
-//   authors:    a.bookId?.authors,
-//   categories: a.bookId?.categories,
-//   timeSpent:  a.timeSpent,
-// })).filter(b => b.title);
-
-// if (viewedBooks.length > 0) {
-//   try {
-//     const readIds  = recentlyRead.map(b => b._id.toString());
-//     const bookList = allBooks
-//       .filter(b => !readIds.includes(b._id.toString()))
-//       .slice(0, 20) // ← limit to 20 to reduce token usage
-//       .map(b => ({
-//         id:         b._id,
-//         title:      b.title,
-//         authors:    b.authors,
-//         categories: b.categories
-//       }));
-
-//     const prompt = `
+//           const prompt = `
 // You are a book recommendation engine.
 // User read these books (timeSpent in seconds):
 // ${JSON.stringify(viewedBooks.slice(0, 5), null, 2)}
@@ -164,57 +110,67 @@
 //   "personalizedIds": ["id1","id2","id3","id4","id5"],
 //   "reason": "one sentence why"
 // }
-//     `.trim();
+//           `.trim();
 
-//     // Retry up to 2 times with delay
-//     let geminiRes;
-//     for (let attempt = 1; attempt <= 2; attempt++) {
-//       try {
-//         geminiRes = await axios.post(
-//           `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
-//           {
-//             contents: [{ parts: [{ text: prompt }] }],
-//             generationConfig: { temperature: 0.7, maxOutputTokens: 300 }
+//           // Retry up to 2 times
+//           let geminiRes;
+//           for (let attempt = 1; attempt <= 2; attempt++) {
+//             try {
+//               geminiRes = await axios.post(
+//                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+//                 {
+//                   contents: [{ parts: [{ text: prompt }] }],
+//                   generationConfig: { temperature: 0.7, maxOutputTokens: 300 }
+//                 }
+//               );
+//               break;
+//             } catch (e) {
+//               if (e.response?.status === 429 && attempt < 2) {
+//                 console.log('Gemini rate limited, retrying in 3s...');
+//                 await new Promise(r => setTimeout(r, 3000));
+//               } else {
+//                 throw e;
+//               }
+//             }
 //           }
-//         );
-//         break; // success, exit loop
-//       } catch (e) {
-//         if (e.response?.status === 429 && attempt < 2) {
-//           console.log('Gemini rate limited, retrying in 3s...');
-//           await new Promise(r => setTimeout(r, 3000));
-//         } else {
-//           throw e;
+
+//           const raw    = geminiRes.data.candidates[0].content.parts[0].text;
+//           const clean  = raw.replace(/```json|```/g, '').trim();
+//           const parsed = JSON.parse(clean);
+
+//           recommendations = allBooks.filter(b =>
+//             parsed.personalizedIds.includes(b._id.toString())
+//           );
+//           reason = parsed.reason;
+
+//           // Save to cache
+//           await RecommendCache.findOneAndUpdate(
+//             { userId: req.user.id },
+//             { recommendations, reason, updatedAt: new Date() },
+//             { upsert: true }
+//           );
+
+//         } catch (e) {
+//           console.error('Gemini error:', e.message);
+
+//           // Fallback — recommend by top category
+//           const topCats = viewedBooks
+//             .flatMap(b => b.categories || [])
+//             .reduce((acc, cat) => {
+//               acc[cat] = (acc[cat] || 0) + 1;
+//               return acc;
+//             }, {});
+//           const topCat = Object.entries(topCats)
+//             .sort((a, b) => b[1] - a[1])[0]?.[0];
+//           if (topCat) {
+//             recommendations = allBooks
+//               .filter(b => b.categories?.includes(topCat))
+//               .slice(0, 5);
+//             reason = `Based on your interest in ${topCat}`;
+//           }
 //         }
 //       }
 //     }
-
-//     const raw    = geminiRes.data.candidates[0].content.parts[0].text;
-//     const clean  = raw.replace(/```json|```/g, '').trim();
-//     const parsed = JSON.parse(clean);
-
-//     recommendations = allBooks.filter(b =>
-//       parsed.personalizedIds.includes(b._id.toString())
-//     );
-//     reason = parsed.reason;
-
-//   } catch (e) {
-//     console.error('Gemini error:', e.message);
-//     // Fallback — recommend by most common category in user history
-//     const topCats = viewedBooks
-//       .flatMap(b => b.categories || [])
-//       .reduce((acc, cat) => {
-//         acc[cat] = (acc[cat] || 0) + 1;
-//         return acc;
-//       }, {});
-//     const topCat = Object.entries(topCats).sort((a,b) => b[1]-a[1])[0]?.[0];
-//     if (topCat) {
-//       recommendations = allBooks
-//         .filter(b => b.categories?.includes(topCat))
-//         .slice(0, 5);
-//       reason = `Based on your interest in ${topCat}`;
-//     }
-//   }
-// }
 
 //     // ── Category Sections ──
 //     const usedIds = [
@@ -267,7 +223,6 @@
 //     if (matched.length >= 2) sections[genre] = matched.slice(0, 10);
 //   });
 
-//   // Fallback — group by first category
 //   books.forEach(book => {
 //     const cat = book.categories?.[0];
 //     if (!cat) return;
@@ -280,7 +235,6 @@
 
 //   return Object.entries(sections).map(([name, books]) => ({ name, books }));
 // }
-
 const Book           = require('../models/Book');
 const UserActivity   = require('../models/UserActivity');
 const RecommendCache = require('../models/RecommendCache');
@@ -344,7 +298,7 @@ exports.getRecommendations = async (req, res) => {
       }
     }
 
-    // ── Gemini Recommendations (with cache) ──
+    // ── Gemini Recommendations ──
     let recommendations = [];
     let reason          = '';
 
@@ -355,14 +309,19 @@ exports.getRecommendations = async (req, res) => {
       timeSpent:  a.timeSpent,
     })).filter(b => b.title);
 
-    if (viewedBooks.length > 0) {
+    // Only call Gemini if user has viewed at least 3 books
+    if (viewedBooks.length >= 3) {
 
-      // Check cache first — only call Gemini every 30 minutes
+      // Check cache — only call Gemini once per 24 hours
       const cache = await RecommendCache.findOne({ userId: req.user.id });
-      if (cache && (Date.now() - cache.updatedAt) < 30 * 60 * 1000) {
+      const cacheAge = cache ? Date.now() - new Date(cache.updatedAt).getTime() : Infinity;
+      const cacheValid = cacheAge < 24 * 60 * 60 * 1000; // 24 hours
+
+      if (cache && cacheValid && !cache.failed) {
         console.log('Using cached recommendations');
-        recommendations = cache.recommendations;
-        reason          = cache.reason;
+        recommendations = cache.recommendations || [];
+        reason          = cache.reason || '';
+
       } else {
         // Call Gemini
         try {
@@ -379,21 +338,21 @@ exports.getRecommendations = async (req, res) => {
 
           const prompt = `
 You are a book recommendation engine.
-User read these books (timeSpent in seconds):
+User read these books (timeSpent in seconds = engagement):
 ${JSON.stringify(viewedBooks.slice(0, 5), null, 2)}
 
 Available books:
 ${JSON.stringify(bookList, null, 2)}
 
-Pick 5 books the user would enjoy.
-Return ONLY valid JSON, no markdown:
+Pick 5 books the user would enjoy based on their reading history.
+Return ONLY valid JSON, no markdown, no explanation:
 {
   "personalizedIds": ["id1","id2","id3","id4","id5"],
-  "reason": "one sentence why"
+  "reason": "one sentence explaining why"
 }
           `.trim();
 
-          // Retry up to 2 times
+          // Retry once with delay on 429
           let geminiRes;
           for (let attempt = 1; attempt <= 2; attempt++) {
             try {
@@ -404,11 +363,11 @@ Return ONLY valid JSON, no markdown:
                   generationConfig: { temperature: 0.7, maxOutputTokens: 300 }
                 }
               );
-              break;
+              break; // success
             } catch (e) {
               if (e.response?.status === 429 && attempt < 2) {
-                console.log('Gemini rate limited, retrying in 3s...');
-                await new Promise(r => setTimeout(r, 3000));
+                console.log('Gemini rate limited, retrying in 10s...');
+                await new Promise(r => setTimeout(r, 10000));
               } else {
                 throw e;
               }
@@ -424,25 +383,43 @@ Return ONLY valid JSON, no markdown:
           );
           reason = parsed.reason;
 
-          // Save to cache
+          // Save successful result to cache
           await RecommendCache.findOneAndUpdate(
             { userId: req.user.id },
-            { recommendations, reason, updatedAt: new Date() },
+            {
+              recommendations,
+              reason,
+              failed:    false,
+              updatedAt: new Date()
+            },
             { upsert: true }
           );
+          console.log('Gemini recommendations cached successfully');
 
         } catch (e) {
           console.error('Gemini error:', e.message);
 
-          // Fallback — recommend by top category
+          // Save failed flag — don't retry for 1 hour
+          await RecommendCache.findOneAndUpdate(
+            { userId: req.user.id },
+            {
+              failed:    true,
+              updatedAt: new Date()
+            },
+            { upsert: true }
+          );
+
+          // Fallback — recommend by top category from user history
           const topCats = viewedBooks
             .flatMap(b => b.categories || [])
             .reduce((acc, cat) => {
               acc[cat] = (acc[cat] || 0) + 1;
               return acc;
             }, {});
+
           const topCat = Object.entries(topCats)
             .sort((a, b) => b[1] - a[1])[0]?.[0];
+
           if (topCat) {
             recommendations = allBooks
               .filter(b => b.categories?.includes(topCat))
@@ -450,6 +427,25 @@ Return ONLY valid JSON, no markdown:
             reason = `Based on your interest in ${topCat}`;
           }
         }
+      }
+
+    } else if (viewedBooks.length > 0) {
+      // Less than 3 books viewed — simple category fallback, no Gemini
+      const topCats = viewedBooks
+        .flatMap(b => b.categories || [])
+        .reduce((acc, cat) => {
+          acc[cat] = (acc[cat] || 0) + 1;
+          return acc;
+        }, {});
+
+      const topCat = Object.entries(topCats)
+        .sort((a, b) => b[1] - a[1])[0]?.[0];
+
+      if (topCat) {
+        recommendations = allBooks
+          .filter(b => b.categories?.includes(topCat))
+          .slice(0, 5);
+        reason = `Based on your interest in ${topCat}`;
       }
     }
 
@@ -516,3 +512,4 @@ function buildDefaultCategories(books) {
 
   return Object.entries(sections).map(([name, books]) => ({ name, books }));
 }
+
