@@ -1,182 +1,5 @@
-//import SwiftUI
-//
-//// ── Meta Info Widget ──
-//struct MetaItem: View {
-//    let icon: String
-//    let color: Color
-//    let label: String
-//    let value: String
-//
-//    var body: some View {
-//        VStack(spacing: 4) {
-//            Image(systemName: icon)
-//                .foregroundColor(color)
-//                .font(.title3)
-//            Text(value)
-//                .font(.subheadline.bold())
-//            Text(label)
-//                .font(.caption)
-//                .foregroundColor(.secondary)
-//        }
-//    }
-//}
-//
-//// ── Book Detail View ──
-//struct BookDetailView: View {
-//    let book: Book
-//    @EnvironmentObject var authVM: AuthViewModel
-//    @Environment(\.dismiss) var dismiss
-//    @State private var appearedAt: Date = Date()
-//
-//    var body: some View {
-//        ScrollView {
-//            VStack(spacing: 0) {
-//
-//                // ── Hero Cover ──
-//                AsyncImage(url: URL(string: book.coverImage ?? "")) { phase in
-//                    switch phase {
-//                    case .success(let image):
-//                        image.resizable().scaledToFill()
-//                    case .failure(_):
-//                        Color.gray.opacity(0.3)
-//                            .overlay(
-//                                Image(systemName: "book.closed.fill")
-//                                    .font(.system(size: 60))
-//                                    .foregroundColor(.gray)
-//                            )
-//                    case .empty:
-//                        Color.gray.opacity(0.2)
-//                            .overlay(ProgressView())
-//                    @unknown default:
-//                        Color.gray.opacity(0.2)
-//                    }
-//                }
-//                .frame(maxWidth: .infinity)
-//                .frame(height: 380)
-//                .clipped()
-//
-//                // ── Content ──
-//                VStack(alignment: .leading, spacing: 20) {
-//
-//                    // Title + Author
-//                    VStack(alignment: .leading, spacing: 6) {
-//                        Text(book.title)
-//                            .font(.title2.bold())
-//                            .fixedSize(horizontal: false, vertical: true)
-//
-//                        if !book.authors.isEmpty {
-//                            Text(book.authorsText)
-//                                .font(.subheadline)
-//                                .foregroundColor(.secondary)
-//                        }
-//                    }
-//
-//                    Divider()
-//
-//                    // Meta Row
-//                    HStack(spacing: 24) {
-//                        if let rating = book.averageRating, rating > 0 {
-//                            MetaItem(
-//                                icon: "star.fill",
-//                                color: .yellow,
-//                                label: "Rating",
-//                                value: String(format: "%.1f", rating)
-//                            )
-//                        }
-//                        if let pages = book.pageCount, pages > 0 {
-//                            MetaItem(
-//                                icon: "doc.text",
-//                                color: .blue,
-//                                label: "Pages",
-//                                value: "\(pages)"
-//                            )
-//                        }
-//                        if let date = book.publishedDate, !date.isEmpty {
-//                            MetaItem(
-//                                icon: "calendar",
-//                                color: .green,
-//                                label: "Year",
-//                                value: String(date.prefix(4))
-//                            )
-//                        }
-//                    }
-//
-//                    Divider()
-//
-//                    // Categories
-//                    if let categories = book.categories, !categories.isEmpty {
-//                        ScrollView(.horizontal, showsIndicators: false) {
-//                            HStack {
-//                                ForEach(categories, id: \.self) { cat in
-//                                    Text(cat)
-//                                        .font(.caption)
-//                                        .padding(.horizontal, 12)
-//                                        .padding(.vertical, 6)
-//                                        .background(Color.blue.opacity(0.1))
-//                                        .foregroundColor(.blue)
-//                                        .cornerRadius(20)
-//                                }
-//                            }
-//                        }
-//                    }
-//
-//                    // Description
-//                    if let desc = book.description, !desc.isEmpty {
-//                        VStack(alignment: .leading, spacing: 8) {
-//                            Text("About this book")
-//                                .font(.headline)
-//                            Text(desc)
-//                                .font(.body)
-//                                .foregroundColor(.secondary)
-//                                .fixedSize(horizontal: false, vertical: true)
-//                        }
-//                    }
-//                }
-//                .padding(20)
-//            }
-//        }
-//        .ignoresSafeArea(edges: .top)
-//        .onAppear {
-//            appearedAt = Date()
-//        }
-//        .onDisappear {
-//            let seconds = Int(Date().timeIntervalSince(appearedAt))
-//            guard seconds > 2 else { return }
-//            Task {
-//                await RecommendService.shared.trackActivity(
-//                    token: authVM.token,
-//                    bookId: book.id,
-//                    googleBookId: book.googleBookId,
-//                    timeSpent: seconds,
-//                    categories: book.categories ?? [],
-//                    authors: book.authors
-//                )
-//            }
-//        }
-//    }
-//}
-
 import SwiftUI
 import PDFKit
-
-// ── PDF Viewer ──
-struct PDFViewer: UIViewRepresentable {
-    let url: URL
-
-    func makeUIView(context: Context) -> PDFView {
-        let pdfView = PDFView()
-        pdfView.autoScales = true
-        pdfView.displayMode = .singlePageContinuous
-        pdfView.displayDirection = .vertical
-        pdfView.usePageViewController(true)
-        if let document = PDFDocument(url: url) {
-            pdfView.document = document
-        }
-        return pdfView
-    }
-
-    func updateUIView(_ uiView: PDFView, context: Context) {}
-}
 
 // ── PDF Reader Sheet ──
 struct PDFReaderView: View {
@@ -189,7 +12,6 @@ struct PDFReaderView: View {
         NavigationStack {
             ZStack {
                 Color.black.ignoresSafeArea()
-
                 if let url = Bundle.main.url(forResource: "book", withExtension: "pdf") {
                     PDFViewWrapper(url: url, currentPage: $currentPage, totalPages: $totalPages)
                         .ignoresSafeArea(edges: .bottom)
@@ -241,11 +63,11 @@ struct PDFViewWrapper: UIViewRepresentable {
 
     func makeUIView(context: Context) -> PDFView {
         let pdfView = PDFView()
-        pdfView.autoScales          = true
-        pdfView.displayMode         = .singlePageContinuous
-        pdfView.displayDirection    = .vertical
-        pdfView.backgroundColor     = .black
-        pdfView.pageShadowsEnabled  = true
+        pdfView.autoScales         = true
+        pdfView.displayMode        = .singlePageContinuous
+        pdfView.displayDirection   = .vertical
+        pdfView.backgroundColor    = .black
+        pdfView.pageShadowsEnabled = true
 
         if let document = PDFDocument(url: url) {
             pdfView.document = document
@@ -253,7 +75,6 @@ struct PDFViewWrapper: UIViewRepresentable {
                 self.totalPages = document.pageCount
             }
         }
-
         NotificationCenter.default.addObserver(
             context.coordinator,
             selector: #selector(Coordinator.pageChanged(_:)),
@@ -282,7 +103,7 @@ struct PDFViewWrapper: UIViewRepresentable {
 
 // ── Meta Info Widget ──
 struct MetaItem: View {
-    let icon: String
+    let icon:  String
     let color: Color
     let label: String
     let value: String
@@ -297,11 +118,8 @@ struct MetaItem: View {
                     .foregroundColor(color)
                     .font(.system(size: 18))
             }
-            Text(value)
-                .font(.subheadline.bold())
-            Text(label)
-                .font(.caption)
-                .foregroundColor(.secondary)
+            Text(value).font(.subheadline.bold())
+            Text(label).font(.caption).foregroundColor(.secondary)
         }
     }
 }
@@ -311,10 +129,11 @@ struct BookDetailView: View {
     let book: Book
     @EnvironmentObject var authVM: AuthViewModel
     @Environment(\.dismiss) var dismiss
-    @State private var appearedAt    = Date()
-    @State private var showPDF       = false
-    @State private var showFullDesc  = false
-    @State private var isBookmarked  = false
+    @State private var appearedAt   = Date()
+    @State private var showPDF      = false
+    @State private var showFullDesc = false
+    @State private var isBookmarked = false
+    @State private var hasTracked   = false          // ← prevents duplicate tracking
 
     var body: some View {
         ScrollView {
@@ -329,7 +148,8 @@ struct BookDetailView: View {
                         case .failure(_):
                             LinearGradient(
                                 colors: [Color.blue.opacity(0.6), Color.purple.opacity(0.4)],
-                                startPoint: .topLeading, endPoint: .bottomTrailing
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
                             )
                             .overlay(
                                 Image(systemName: "book.closed.fill")
@@ -344,7 +164,6 @@ struct BookDetailView: View {
                     .frame(height: 400)
                     .clipped()
 
-                    // Gradient overlay at bottom of image
                     LinearGradient(
                         colors: [.clear, Color(.systemBackground)],
                         startPoint: .center,
@@ -356,7 +175,7 @@ struct BookDetailView: View {
                 // ── Content ──
                 VStack(alignment: .leading, spacing: 24) {
 
-                    // Title + Author + Bookmark
+                    // ── Title + Author + Bookmark ──
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 6) {
                             Text(book.title)
@@ -374,13 +193,9 @@ struct BookDetailView: View {
                                 }
                             }
                         }
-
                         Spacer()
-
                         Button {
-                            withAnimation(.spring()) {
-                                isBookmarked.toggle()
-                            }
+                            withAnimation(.spring()) { isBookmarked.toggle() }
                         } label: {
                             Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
                                 .font(.title2)
@@ -392,17 +207,12 @@ struct BookDetailView: View {
                     }
 
                     // ── Read Book Button ──
-                    Button {
-                        showPDF = true
-                    } label: {
+                    Button { showPDF = true } label: {
                         HStack(spacing: 10) {
-                            Image(systemName: "book.pages.fill")
-                                .font(.headline)
-                            Text("Read Book")
-                                .font(.headline.bold())
+                            Image(systemName: "book.pages.fill").font(.headline)
+                            Text("Read Book").font(.headline.bold())
                             Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.subheadline)
+                            Image(systemName: "chevron.right").font(.subheadline)
                         }
                         .foregroundColor(.white)
                         .padding(.horizontal, 20)
@@ -445,8 +255,7 @@ struct BookDetailView: View {
                     // ── Categories ──
                     if let categories = book.categories, !categories.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Genres")
-                                .font(.headline)
+                            Text("Genres").font(.headline)
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack {
                                     ForEach(categories, id: \.self) { cat in
@@ -470,15 +279,12 @@ struct BookDetailView: View {
                     // ── Description ──
                     if let desc = book.description, !desc.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
-                            Text("About this book")
-                                .font(.headline)
-
+                            Text("About this book").font(.headline)
                             Text(desc)
                                 .font(.body)
                                 .foregroundColor(.secondary)
                                 .lineLimit(showFullDesc ? nil : 4)
                                 .fixedSize(horizontal: false, vertical: true)
-
                             Button {
                                 withAnimation { showFullDesc.toggle() }
                             } label: {
@@ -492,7 +298,7 @@ struct BookDetailView: View {
                         .cornerRadius(16)
                     }
 
-                    // ── Share Row ──
+                    // ── Share + Save Row ──
                     HStack(spacing: 12) {
                         ShareLink(item: "Check out '\(book.title)' by \(book.authorsText) on NxtTale!") {
                             HStack {
@@ -530,21 +336,40 @@ struct BookDetailView: View {
         }
         .ignoresSafeArea(edges: .top)
         .navigationBarBackButtonHidden(false)
-        .onAppear  { appearedAt = Date() }
+
+        // ── Track on OPEN — only once ──
+        .onAppear {
+            appearedAt = Date()
+            guard !hasTracked else { return }   // ← blocks duplicate calls
+            hasTracked = true
+            Task {
+                await RecommendService.shared.trackActivity(
+                    token:        authVM.token,
+                    bookId:       book.id,
+                    googleBookId: book.googleBookId,
+                    timeSpent:    10,
+                    categories:   book.categories ?? [],
+                    authors:      book.authors
+                )
+            }
+        }
+
+        // ── Track time spent on CLOSE ──
         .onDisappear {
             let seconds = Int(Date().timeIntervalSince(appearedAt))
             guard seconds > 2 else { return }
             Task {
                 await RecommendService.shared.trackActivity(
-                    token: authVM.token,
-                    bookId: book.id,
+                    token:        authVM.token,
+                    bookId:       book.id,
                     googleBookId: book.googleBookId,
-                    timeSpent: seconds,
-                    categories: book.categories ?? [],
-                    authors: book.authors
+                    timeSpent:    seconds,
+                    categories:   book.categories ?? [],
+                    authors:      book.authors
                 )
             }
         }
+
         .sheet(isPresented: $showPDF) {
             PDFReaderView(bookTitle: book.title)
         }

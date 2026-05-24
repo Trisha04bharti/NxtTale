@@ -1,0 +1,57 @@
+import torch
+import faiss
+import numpy as np
+from train_model import ProposedRecModel
+
+# ==========================================
+# TOTAL BOOKS
+# ==========================================
+
+NUM_BOOKS = 50000
+
+# ==========================================
+# LOAD TRAINED MODEL
+# ==========================================
+
+model = ProposedRecModel(NUM_BOOKS)
+
+model.load_state_dict(
+    torch.load(
+        "saved_models/book_model.pth"
+    )
+)
+
+model.eval()
+
+print("Model Loaded")
+
+# ==========================================
+# GET BOOK EMBEDDINGS
+# ==========================================
+
+book_embeddings = model.embedding.weight.detach().numpy()
+
+print("Embedding Shape:", book_embeddings.shape)
+
+# ==========================================
+# CREATE FAISS INDEX
+# ==========================================
+
+dimension = book_embeddings.shape[1]
+
+index = faiss.IndexFlatL2(dimension)
+
+index.add(book_embeddings)
+
+print("FAISS Index Created")
+
+# ==========================================
+# SAVE INDEX
+# ==========================================
+
+faiss.write_index(
+    index,
+    "saved_models/faiss_index.bin"
+)
+
+print("FAISS Index Saved")
