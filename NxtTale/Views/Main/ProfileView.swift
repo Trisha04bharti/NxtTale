@@ -1,4 +1,3 @@
-
 import SwiftUI
 import PhotosUI
 
@@ -288,7 +287,7 @@ struct ProfileView: View {
 
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
-                    .foregroundColor(.tertiaryLabel)
+                    .foregroundColor(Color(.tertiaryLabel))
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
@@ -302,4 +301,173 @@ struct ProfileView: View {
         .padding(.bottom, 24)
     }
 
+    // MARK: - Action Buttons
 
+    private var actionButtons: some View {
+        VStack(spacing: 12) {
+
+            // Save button
+            Button {
+                Task { await handleSave() }
+            } label: {
+                ZStack {
+                    if saving {
+                        ProgressView()
+                            .tint(.white)
+                    } else if saveSuccess {
+                        Label("Saved!", systemImage: "checkmark.circle.fill")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .transition(.scale.combined(with: .opacity))
+                    } else {
+                        Text("Save Changes")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .transition(.opacity)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
+                .background(
+                    Group {
+                        if saveSuccess {
+                            LinearGradient(
+                                colors: [.green, .teal],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        } else {
+                            LinearGradient(
+                                colors: [Color.blue, Color(hex: "0099FF")],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        }
+                    }
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .shadow(
+                    color: saveSuccess ? .green.opacity(0.4) : .blue.opacity(0.35),
+                    radius: 10, x: 0, y: 5
+                )
+            }
+            .disabled(saving || saveSuccess)
+            .animation(.spring(response: 0.4), value: saveSuccess)
+
+            // Logout button
+            Button {
+                showLogoutAlert = true
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Logout")
+                        .font(.headline)
+                }
+                .foregroundColor(.red)
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.red.opacity(0.08))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .strokeBorder(Color.red.opacity(0.2), lineWidth: 1)
+                        )
+                )
+            }
+        }
+        .padding(.horizontal)
+        .padding(.bottom, 48)
+    }
+
+    // MARK: - Save Logic
+
+    @MainActor
+    private func handleSave() async {
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        saving = true
+
+        let base64 = photoData?.base64EncodedString()
+        let updated = try? await AuthService.shared.updateProfile(
+            token: authVM.token,
+            birthdate: birthdate.isEmpty ? nil : birthdate,
+            photoBase64: base64
+        )
+        if let u = updated { authVM.user = u }
+
+        saving = false
+
+        withAnimation { saveSuccess = true }
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+
+        try? await Task.sleep(nanoseconds: 2_000_000_000)
+        withAnimation { saveSuccess = false }
+    }
+}
+
+// MARK: - Enhanced Info Row
+
+struct EnhancedInfoRow: View {
+
+    let icon: String
+    let gradient: [Color]
+    let title: String
+    let value: String
+
+    var body: some View {
+        HStack(spacing: 14) {
+
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(
+                        LinearGradient(
+                            colors: gradient,
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 38, height: 38)
+
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Text(value)
+                    .font(.subheadline.weight(.medium))
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundColor(Color(.tertiaryLabel))
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.systemBackground))
+                .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
+        )
+    }
+}
+
+// MARK: - Hex Color Helper
+
+extension Color {
+    init(hex: String) {
+        let v = Int(hex, radix: 16) ?? 0
+        let r = Double((v >> 16) & 0xFF) / 255
+        let g = Double((v >> 8)  & 0xFF) / 255
+        let b = Double(v         & 0xFF) / 255
+        self.init(red: r, green: g, blue: b)
+    }
+}
